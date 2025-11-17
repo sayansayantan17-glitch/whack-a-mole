@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pro Whack-a-Mole - 9 Holes</title>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#f3f7fb;
+  --primary:#1266f1;
+  --card:#ffffff;
+  --muted:#6b7280;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:'Hind Siliguri',sans-serif;
+  background:var(--bg);
+  color:#0f172a;
+  user-select:none;
+  padding:18px;
+}
+
+/* Container */
+.container{
+  max-width:1100px;
+  margin:0 auto;
+  background:linear-gradient(180deg, rgba(255,255,255,0.96), rgba(249,250,252,0.96));
+  border-radius:14px;
+  padding:16px;
+  box-shadow:0 8px 30px rgba(16,24,40,0.08);
+  overflow:hidden;
+}
+
+/* Header */
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-bottom:10px;
+}
+h1{font-size:20px;}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.controls select, .controls input[type=number]{padding:8px;border-radius:8px;border:1px solid #e6eefb;background:white;font-size:14px;}
+button{padding:9px 14px;border-radius:10px;border:0;background:var(--primary);color:white;font-weight:700;cursor:pointer;box-shadow:0 6px 16px rgba(18,102,241,0.14);}
+button.ghost{background:transparent;color:var(--primary);box-shadow:none;border:1px solid rgba(18,102,241,0.12);}
+button:disabled{opacity:.5;cursor:default;box-shadow:none;}
+
+/* Status row */
+.status{display:flex;gap:12px;margin:12px 0;flex-wrap:wrap;}
+.stat{background:var(--card);padding:10px 12px;border-radius:10px;box-shadow:0 4px 10px rgba(16,24,40,0.04);min-width:120px;}
+.stat strong{display:block;font-size:20px;}
+
+/* Game wrap */
+.game-wrap{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;}
+.left-panel{flex:1 1 620px;min-width:300px;}
+.playground{
+  background-image:url('images/background.jpg');
+  background-size:cover;
+  background-position:center;
+  border-radius:12px;
+  height:560px;
+  position:relative;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+/* Hole grid */
+.hole-grid{
+  display:grid;
+  grid-template-columns: repeat(3,1fr);
+  grid-template-rows: repeat(3,1fr);
+  column-gap: 20px;   /* horizontal gap */
+  row-gap: 8px;       /* vertical gap */
+  width:100%;
+  height:100%;
+  align-items:start;
+  justify-items:center;
+}
+.hole{
+  width:140px;
+  height:140px;
+  background-image:url('images/hole.png');
+  background-size:contain;
+  background-repeat:no-repeat;
+  background-position:center;
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  position:relative;
+  overflow:hidden; /* clip mole inside hole */
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.12));
+}
+.mole{
+  width:86%;
+  max-width:140px;
+  height:86%;
+  background-color: transparent;
+  background-image:url('images/mole.png');
+  background-size:contain;
+  background-position:center;
+  background-repeat:no-repeat;
+  position:absolute;
+  bottom:0;
+  left:50%;
+  transform:translateX(-50%) translateY(120%);
+  transition: transform 160ms cubic-bezier(.2,.9,.3,1);
+  cursor:pointer;
+  z-index:2;
+}
+.mole.up{
+  transform:translateX(-50%) translateY(0);
+}
+
+/* Hammer */
+#hammer{
+  position:fixed;
+  width:160px;
+  height:160px;
+  background-image:url('images/hammer.png');
+  background-size:contain;
+  background-repeat:no-repeat;
+  pointer-events:none;
+  transform:translate(-50%,-50%) rotate(0deg);
+  transition: transform 60ms linear;
+  z-index:9999;
+}
+
+/* Right panel */
+.right-panel{width:300px;min-width:260px;display:flex;flex-direction:column;gap:12px;}
+.card{background:var(--card);padding:12px;border-radius:12px;box-shadow:0 6px 18px rgba(16,24,40,0.04);}
+.leader h3{margin:4px 0 8px 0;}
+.leader p{margin:6px 0;color:var(--muted);}
+
+/* Responsive */
+@media (max-width:900px){.game-wrap{flex-direction:column}.right-panel{width:100%}.playground{height:480px}}
+@media (max-width:540px){.playground{height:420px}.hole{width:100px;height:100px}.mole{transition: transform 140ms cubic-bezier(.2,.9,.3,1)}#hammer{width:120px;height:120px}}
+
+/* Score pop */
+.score-pop{
+  position:absolute;
+  pointer-events:none;
+  font-weight:700;
+  color:#fff;
+  text-shadow:0 2px 8px rgba(0,0,0,0.35);
+  transform: translate(-50%,-50%) scale(1);
+  transition: transform 260ms cubic-bezier(.2,.9,.3,1), opacity 260ms;
+  z-index:500;
+}
+
+/* Modal */
+#modal{
+  position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
+  background:white; padding:18px; border-radius:12px; box-shadow:0 18px 60px rgba(2,6,23,0.28);
+  display:none; z-index:10000; width:320px;
+}
+#modal h2{margin:0 0 8px 0;}
+#modal p{margin:6px 0 12px 0;}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+<h1>Pro Whack-a-Mole</h1>
+<div class="controls">
+<label>Time (seconds):</label>
+<input id="duration" type="number" value="30" min="5" max="300" style="width:80px"/>
+<label>Difficulty:</label>
+<select id="difficulty">
+<option value="easy">Easy</option>
+<option value="medium" selected>Medium</option>
+<option value="hard">Hard</option>
+</select>
+<button id="startBtn">Start</button>
+<button id="stopBtn" class="ghost" disabled>Stop</button>
+<button id="restartBtn" class="ghost">Restart</button>
+</div>
+</header>
+
+<div class="status">
+<div class="stat">Score <strong id="score">0</strong></div>
+<div class="stat">Time <strong id="time">0</strong></div>
+<div class="stat">Highscore <strong id="highscore">0</strong></div>
+</div>
+
+<div class="game-wrap">
+<div class="left-panel">
+<div class="playground" id="playground">
+<div class="hole-grid" id="holes">
+  <!-- 9 Holes -->
+  <div class="hole"><div class="mole"></div></div>
+  <div class="hole"><div class="mole"></div></div>
+  <div class="hole"><div class="mole"></div></div>
+  <div class="hole"><div class="mole"></div></div>
+  <div class="hole"><div class="mole"></div></div>
+  <div class="hole"><div class="mole"></div></div>
+  <div class="hole"><div class="mole"></div></div>
+  <div class="hole"><div class="mole"></div></div>
+  <div class="hole"><div class="mole"></div></div>
+</div>
+</div>
+</div>
+
+<div class="right-panel">
+<div class="card leader">
+<h3>How to Play?</h3>
+<p>Click Start → Whack the mole as soon as it appears! Game ends when time is up.</p>
+</div>
+<div class="card">
+<h3>Controls</h3>
+<p>Use Mouse or Touch. Works on mobile too.</p>
+</div>
+</div>
+</div>
+</div>
+
+<div id="hammer"></div>
+<div id="modal" role="dialog" aria-hidden="true">
+<h2>Game Over!</h2>
+<p id="modalText"></p>
+<div style="text-align:right">
+<button id="modalClose">Close</button>
+<button id="modalRestart" style="margin-left:6px">Play Again</button>
+</div>
+</div>
+
+<audio id="bgm" src="sounds/bgm.mp3" loop preload="auto"></audio>
+<audio id="hit" src="sounds/hit.mp3" preload="auto"></audio>
+<audio id="miss" src="sounds/miss.mp3" preload="auto"></audio>
+<audio id="end" src="sounds/end.mp3" preload="auto"></audio>
+
+<script>
+// --- DOM Elements ---
+const startBtn = document.getElementById('startBtn');
+const stopBtn = document.getElementById('stopBtn');
+const restartBtn = document.getElementById('restartBtn');
+const durationInput = document.getElementById('duration');
+const difficultySelect = document.getElementById('difficulty');
+const scoreEl = document.getElementById('score');
+const timeEl = document.getElementById('time');
+const highscoreEl = document.getElementById('highscore');
+const moleEls = Array.from(document.querySelectorAll('.mole'));
+const hammer = document.getElementById('hammer');
+const modal = document.getElementById('modal');
+const modalText = document.getElementById('modalText');
+const modalClose = document.getElementById('modalClose');
+const modalRestart = document.getElementById('modalRestart');
+
+const bgm = document.getElementById('bgm');
+const hitS = document.getElementById('hit');
+const missS = document.getElementById('miss');
+const endS = document.getElementById('end');
+
+// --- Game state ---
+let score=0, timeLeft=0, gameTimer=null, active=false, lastHole=null, popupTimeout=null, spawnTimeout=null;
+
+// Load highscore
+highscoreEl.textContent = localStorage.getItem('wam_highscore')||0;
+
+// Helpers
+function randomHole(){
+  const idx = Math.floor(Math.random()*moleEls.length);
+  const hole = moleEls[idx].parentElement;
+  if(hole===lastHole) return randomHole();
+  lastHole = hole;
+  return hole;
+}
+function upTimeForDiff(level){
+  if(level==='easy') return 1000;
+  if(level==='medium') return 700;
+  return 420;
+}
+
+// Show mole
+function showMoleOnce(){
+  if(!active) return;
+  const hole = randomHole();
+  const mole = hole.querySelector('.mole');
+  mole.classList.add('up'); mole.dataset.active='true';
+  const upTime = upTimeForDiff(difficultySelect.value);
+  popupTimeout = setTimeout(()=>{
+    if(mole.dataset.active==='true'){
+      mole.dataset.active='false';
+      mole.classList.remove('up');
+      try{ missS.currentTime=0; missS.play().catch(()=>{}); }catch(e){}
+    }
+    spawnTimeout = setTimeout(showMoleOnce, 180 + Math.random()*200);
+  }, upTime);
+}
+function startSpawning(){spawnTimeout=setTimeout(showMoleOnce,350);}
+
+// Start game
+function startGame(){
+  if(active) return;
+  try{ bgm.currentTime=0; bgm.play().catch(()=>{}); }catch(e){}
+  score=0; scoreEl.textContent=score;
+  const dur=Math.max(5, Math.min(300, parseInt(durationInput.value||'30',10)));
+  timeLeft=dur; timeEl.textContent=timeLeft;
+  startBtn.disabled=true; stopBtn.disabled=false; restartBtn.disabled=true; active=true;
+  gameTimer=setInterval(()=>{
+    timeLeft--; timeEl.textContent=timeLeft;
+    if(timeLeft<=0) endGame();
+  },1000);
+  startSpawning();
+}
+
+// End game
+function endGame(){
+  if(!active) return;
+  active=false; startBtn.disabled=false; stopBtn.disabled=true; restartBtn.disabled=false;
+  clearInterval(gameTimer); clearTimeout(popupTimeout); clearTimeout(spawnTimeout);
+  moleEls.forEach(m=>{m.classList.remove('up'); m.dataset.active='false';});
+  try{ bgm.pause(); bgm.currentTime=0; }catch(e){}
+  try{ endS.currentTime=0; endS.play().catch(()=>{}); }catch(e){}
+  const prev=parseInt(localStorage.getItem('wam_highscore')||0,10);
+  if(score>prev){localStorage.setItem('wam_highscore',score); highscoreEl.textContent=score;}
+  modalText.textContent=`Game Over! Your Score: ${score}`;
+  modal.style.display='block'; modal.setAttribute('aria-hidden','false');
+}
+
+// Stop game
+function stopGame(){if(active) endGame();}
+
+// Restart
+function restartGame(){
+  modal.style.display='none'; modal.setAttribute('aria-hidden','true');
+  score=0; scoreEl.textContent=score;
+  startGame();
+}
+
+// Mole click
+moleEls.forEach(mole=>{
+  mole.addEventListener('click', e=>{
+    if(!active||mole.dataset.active!=='true') return;
+    mole.dataset.active='false'; mole.classList.remove('up');
+    score++; scoreEl.textContent=score;
+    showScorePop(e.clientX,e.clientY,'+1');
+    try{ hitS.currentTime=0; hitS.play().catch(()=>{}); }catch(e){}
+    clearTimeout(popupTimeout);
+    spawnTimeout=setTimeout(showMoleOnce,120+Math.random()*200);
+  });
+});
+
+// Score pop
+function showScorePop(x,y,text){
+  const sp=document.createElement('div');
+  sp.className='score-pop';
+  sp.style.left=x+'px';
+  sp.style.top=y+'px';
+  sp.style.fontSize='22px';
+  sp.style.padding='4px 8px';
+  sp.style.background='linear-gradient(90deg,#12c2e9,#c471ed)';
+  sp.style.borderRadius='8px';
+  sp.style.opacity='1';
+  sp.textContent=text;
+  document.body.appendChild(sp);
+  requestAnimationFrame(()=>{sp.style.transform='translate(-50%,-90%) scale(1.2)'; sp.style.opacity='0';});
+  setTimeout(()=>sp.remove(),600);
+}
+
+// Hammer follow mouse/touch
+function moveHammer(x,y){hammer.style.left=x+'px'; hammer.style.top=y+'px';}
+document.addEventListener('mousemove',e=>moveHammer(e.clientX,e.clientY));
+document.addEventListener('touchmove',e=>{if(e.touches && e.touches[0]) moveHammer(e.touches[0].clientX,e.touches[0].clientY);},{passive:true});
+
+// Hammer click animation
+['mousedown','touchstart'].forEach(ev=>document.addEventListener(ev,()=>{hammer.style.transform='translate(-50%,-50%) rotate(20deg) scale(0.98)';}));
+['mouseup','touchend'].forEach(ev=>document.addEventListener(ev,()=>{hammer.style.transform='translate(-50%,-50%) rotate(0deg) scale(1)';}));
+
+// UI events
+startBtn.addEventListener('click',startGame);
+stopBtn.addEventListener('click',stopGame);
+restartBtn.addEventListener('click',restartGame);
+modalClose.addEventListener('click',()=>{modal.style.display='none'; modal.setAttribute('aria-hidden','true');});
+modalRestart.addEventListener('click',restartGame);
+
+timeEl.textContent=durationInput.value||'30';
+</script>
+</body>
+</html>
